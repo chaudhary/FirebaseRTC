@@ -16,20 +16,23 @@ const configuration = {
 let peerConnection = null;
 let localStream = null;
 let remoteStream = null;
-let roomDialog = null;
 let roomId = null;
 
 function init() {
-  document.querySelector('#cameraBtn').addEventListener('click', openUserMedia);
   document.querySelector('#hangupBtn').addEventListener('click', hangUp);
   document.querySelector('#createBtn').addEventListener('click', createRoom);
-  document.querySelector('#joinBtn').addEventListener('click', joinRoom);
-  roomDialog = new mdc.dialog.MDCDialog(document.querySelector('#room-dialog'));
+  openUserMedia();
+  let pathname = location.pathname;
+  pathname = pathname.replace("/","")
+  if(pathname != ""){
+    setTimeout(function(){
+      joinRoomById(pathname);
+    }, 10)
+  }
 }
 
 async function createRoom() {
   document.querySelector('#createBtn').disabled = true;
-  document.querySelector('#joinBtn').disabled = true;
   const db = firebase.firestore();
 
   console.log('Create PeerConnection with configuration: ', configuration);
@@ -54,7 +57,9 @@ async function createRoom() {
   }
   const roomRef = await db.collection('rooms').add(roomWithOffer);
   const roomId = roomRef.id;
+  const roomLink = `${location.origin}/${roomId}`
   document.querySelector('#currentRoom').innerText = `Current room is ${roomId} - You are the caller!`
+  document.querySelector('#currentRoomLink').innerHTML = `<a href=${roomLink} target="_blank">${roomLink}</a>`;
 
   // Code for creating a room above
 
@@ -105,21 +110,6 @@ async function createRoom() {
   })
 
   // Listen for remote ICE candidates above
-}
-
-function joinRoom() {
-  document.querySelector('#createBtn').disabled = true;
-  document.querySelector('#joinBtn').disabled = true;
-
-  document.querySelector('#confirmJoinBtn').
-      addEventListener('click', async () => {
-        roomId = document.querySelector('#room-id').value;
-        console.log('Join room: ', roomId);
-        document.querySelector(
-            '#currentRoom').innerText = `Current room is ${roomId} - You are the callee!`;
-        await joinRoomById(roomId);
-      }, {once: true});
-  roomDialog.open();
 }
 
 async function joinRoomById(roomId) {
@@ -196,8 +186,6 @@ async function openUserMedia(e) {
   document.querySelector('#remoteVideo').srcObject = remoteStream;
 
   console.log('Stream:', document.querySelector('#localVideo').srcObject);
-  document.querySelector('#cameraBtn').disabled = true;
-  document.querySelector('#joinBtn').disabled = false;
   document.querySelector('#createBtn').disabled = false;
   document.querySelector('#hangupBtn').disabled = false;
 }
@@ -218,8 +206,6 @@ async function hangUp(e) {
 
   document.querySelector('#localVideo').srcObject = null;
   document.querySelector('#remoteVideo').srcObject = null;
-  document.querySelector('#cameraBtn').disabled = false;
-  document.querySelector('#joinBtn').disabled = true;
   document.querySelector('#createBtn').disabled = true;
   document.querySelector('#hangupBtn').disabled = true;
   document.querySelector('#currentRoom').innerText = '';
@@ -242,8 +228,7 @@ async function hangUp(e) {
   document.location.reload(true);
 }
 
-async function collectIceCandidates(roomRef, peerConnection,
-                                    localName, remoteName) {
+async function collectIceCandidates(roomRef, peerConnection, localName, remoteName) {
     const candidatesCollection = roomRef.collection(localName);
 
     peerConnection.addEventListener('icecandidate', event => {
