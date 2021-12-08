@@ -27,7 +27,7 @@ function init() {
   if(pathname != ""){
     setTimeout(function(){
       joinRoomById(pathname);
-    }, 10)
+    }, 100);
   }
 }
 
