@@ -12,7 +12,7 @@ const configuration = {
 let myPeerId = null;
 let otherPeerIds = [];
 let localStream = null;
-let remoteStream = null;
+let remoteStreams = {};
 let myPeer = null;
 
 function init() {
@@ -30,11 +30,8 @@ function init() {
 async function openUserMedia(e) {
   const stream = await navigator.mediaDevices.getUserMedia(
       {video: true, audio: false});
-  document.querySelector('#localVideo').srcObject = stream;
   localStream = stream;
-  remoteStream = new MediaStream();
-  document.querySelector('#remoteVideo').srcObject = remoteStream;
-
+  document.querySelector('#localVideo').srcObject = localStream;
   console.log('Stream:', document.querySelector('#localVideo').srcObject);
   document.querySelector('#createBtn').disabled = false;
   document.querySelector('#hangupBtn').disabled = false;
@@ -79,20 +76,33 @@ async function joinRoomById(roomId){
                 call2.answer(localStream);
                 call2.on('stream', function(stream) {
                   console.log(stream);
-                  remoteStream = stream;
-                  document.querySelector('#remoteVideo').srcObject = remoteStream;
+                  remoteStreams[otherPeer.id] = stream;
+                  renderRemoteStreams(remoteStreams);
                 });
               });
               call.on('stream', function(stream) {
                 console.log(stream);
-                remoteStream = stream;
-                document.querySelector('#remoteVideo').srcObject = remoteStream;
+                remoteStreams[otherPeer.id] = stream;
+                renderRemoteStreams(remoteStreams);
               });
             }
         });
     })
   });
 
+}
+
+function renderRemoteStreams(remoteStreams){
+  let tags = [];
+  for(const otherPeerId in remoteStreams){
+    tags.push(`<video autoplay playsinline id="a${otherPeerId}"></video>`)
+  }
+  document.querySelector('#remoteVideo').innerHTML = tags;
+  setTimeout(function(){
+    for(const otherPeerId in remoteStreams){
+      document.querySelector(`#a${otherPeerId}`).srcObject = remoteStreams[otherPeerId];
+    }
+  })
 }
 
 init();
